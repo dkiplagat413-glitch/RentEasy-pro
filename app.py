@@ -187,8 +187,8 @@ if st.button("Pay Now"):
                                  json=payload, headers=headers)
 
         'if response.status_code == 200:'
-            supabase =create_client(st.secrets["SUPABASE_URL"], st. secrets["SUPABASE_KEY"])
-            supabase.table("payments").insert({
+        supabase =create_client(st.secrets["SUPABASE_URL"], st. secrets["SUPABASE_KEY"])
+        supabase.table("payments").insert({
                 "phone-number": int(amount),
                 "status": "pending"
             }) . execute()
