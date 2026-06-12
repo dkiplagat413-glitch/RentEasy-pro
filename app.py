@@ -1,25 +1,4 @@
-None
-selected
 
-Skip
-to
-content
-Using
-Gmail
-with screen readers
-1
-of
-274
-(no subject)
-Inbox
-
-Dennis
-Kiplagat < dkiplagat413 @ gmail.com >
-2: 07 PM(0
-minutes
-ago)
-to
-me
 
 import streamlit as st
 import pandas as pd
