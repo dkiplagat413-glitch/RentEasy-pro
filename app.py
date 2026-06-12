@@ -6,6 +6,7 @@ import requests
 import base64
 import sqlite3
 import os
+from supabase import create_client
 from datetime import datetime
 
 def get_access_token():
@@ -180,10 +181,20 @@ if st.button("Pay Now"):
             "TransactionDesc": "Rent Payment"
         }
 
+
+
         response = requests.post("https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest",
                                  json=payload, headers=headers)
 
-        if response.status_code == 200:
+        'if response.status_code == 200:'
+            supabase =create_client(st.secrets["SUPABASE_URL"], st. secrets["SUPABASE_KEY"])
+            supabase.table("payments").insert({
+                "phone-number": int(amount),
+                "status": "pending"
+            }) . execute()
+            st . success("Transaction recorded in database!")
+        except Exeption as e :
+            st.error(f"Database error: {e}")
             st.success("STK Push sent successfully! Check your phone.")
         else:
             st.error(f"Failed to initiate payment: {response.text}")
