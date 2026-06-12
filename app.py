@@ -138,7 +138,7 @@ menu = st.sidebar.radio("Navigation Menu", [
 ])
 
 if menu == "Pay Rent":
-st.subheader("Rent Payment Portal")
+  st.subheader("Rent Payment Portal")
 phone = st.text_input("M-Pesa Phone Number (e.g., 2547XXXXXXXX)", value="254")
 amount = st.number_input("Rent Amount", min_value=1.0)
 
