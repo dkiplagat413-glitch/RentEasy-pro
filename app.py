@@ -186,21 +186,31 @@ if st.button("Pay Now"):
         response = requests.post("https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest",
                                  json=payload, headers=headers)
 
-        'if response.status_code == 200:'
-        supabase =create_client(st.secrets["SUPABASE_URL"], st. secrets["SUPABASE_KEY"])
-        supabase.table("payments").insert({
-                "phone-number": int(amount),
-                "status": "pending"
-            }) . execute()
-        st . success("Transaction recorded in database!")
-        except Exeption as e :
-        st.error(f"Database error: {e}")
-        st.success("STK Push sent successfully! Check your phone.")
-    else:
-        st.error(f"Failed to initiate payment: {response.text}")
+        if response.status_code == 200:
+            try:
+                supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
-else:
-        st.error("Authentication Failed!")
+                supabase.table("payments").insert({
+                    "phone_number": str(phone),
+                    "amount": float(amount),
+                    "status": "pending"
+                }).execute()
+
+                st.success("Transaction recorded in database!")
+                st.success("STK Push sent successfully! Check your phone.")
+
+            except Exception as e:
+                st.error(f"Database error: {e}")
+
+        elif response.status_code == 401:
+            # This handles the "Authentication Failed" specifically
+            st.error("Authentication Failed! Please check your M-Pesa credentials.")
+
+        else:
+            # This handles other general failures
+            st.error(f"Failed to initiate payment: {response.text}")
+
+
 
 
 # ==========================================
