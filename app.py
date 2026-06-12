@@ -2,9 +2,27 @@
 
 import streamlit as st
 import pandas as pd
+import requests
+import base64
 import sqlite3
 import os
 from datetime import datetime
+
+def get_access_token():
+    consumer_key = st.secrets["mpesa"]["consumer_key"]
+    consumer_secret = st.secrets["mpesa"]["consumer_secret"]
+    api_url = "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
+    response = requests.get(api_url, auth=(consumer_key, consumer_secret))
+    return response.json().get("access_token")
+
+def get_stk_password():
+    shortcode = "174379"
+    # Use the passkey from the Daraja portal
+    passkey = "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    data_to_encode = shortcode + passkey + timestamp
+    password = base64.b64encode(data_to_encode.encode()).decode()
+    return timestamp, password
 
 # --- CONFIGURATION & DIRECTORY SETUP ---
 st.set_page_config(page_title="RentEasy Pro", layout="wide", page_icon="🏢")
@@ -143,8 +161,35 @@ phone = st.text_input("M-Pesa Phone Number (e.g., 2547XXXXXXXX)", value="254")
 amount = st.number_input("Rent Amount", min_value=1.0)
 
 if st.button("Pay Now"):
-    st.write(f"Initiating payment of {amount} to {phone}...")
-    st.info("Connecting to M-Pesa...")
+    token = get_access_token()
+    if token:
+        st.success("Authentication Successful!")
+        timestamp, password = get_stk_password()  # Ensure you have this function at the top
+        headers = {"Authorization": f"Bearer {token}"}
+        payload = {
+            "BusinessShortCode": "174379",
+            "Password": password,
+            "Timestamp": timestamp,
+            "TransactionType": "CustomerPayBillOnline",
+            "Amount": int(amount),
+            "PartyA": phone,
+            "PartyB": "174379",
+            "PhoneNumber": phone,
+            "CallBackURL": "https://mydomain.com/callback",
+            "AccountReference": "RentPayment",
+            "TransactionDesc": "Rent Payment"
+        }
+
+        response = requests.post("https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest",
+                                 json=payload, headers=headers)
+
+        if response.status_code == 200:
+            st.success("STK Push sent successfully! Check your phone.")
+        else:
+            st.error(f"Failed to initiate payment: {response.text}")
+
+    else:
+        st.error("Authentication Failed!")
 
 
 # ==========================================
