@@ -133,8 +133,19 @@ menu = st.sidebar.radio("Navigation Menu", [
     "🏠 Manage Properties",
     "👤 Manage Tenants",
     "💰 Rent Tracker & Reminders",
-    "📁 Lease Document Vault"
+    "📁 Lease Document Vault",
+    "Pay Rent"
 ])
+
+if menu == "Pay Rent":
+st.subheader("Rent Payment Portal")
+phone = st.text_input("M-Pesa Phone Number (e.g., 2547XXXXXXXX)", value="254")
+amount = st.number_input("Rent Amount", min_value=1.0)
+
+if st.button("Pay Now"):
+    st.write(f"Initiating payment of {amount} to {phone}...")
+    st.info("Connecting to M-Pesa...")
+
 
 # ==========================================
 # 1. FINANCIAL REPORTS
