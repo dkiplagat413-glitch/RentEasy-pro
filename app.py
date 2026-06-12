@@ -192,14 +192,14 @@ if st.button("Pay Now"):
                 "phone-number": int(amount),
                 "status": "pending"
             }) . execute()
-            st . success("Transaction recorded in database!")
+        st . success("Transaction recorded in database!")
         except Exeption as e :
-            st.error(f"Database error: {e}")
-            st.success("STK Push sent successfully! Check your phone.")
-        else:
-            st.error(f"Failed to initiate payment: {response.text}")
-
+        st.error(f"Database error: {e}")
+        st.success("STK Push sent successfully! Check your phone.")
     else:
+        st.error(f"Failed to initiate payment: {response.text}")
+
+else:
         st.error("Authentication Failed!")
 
 
