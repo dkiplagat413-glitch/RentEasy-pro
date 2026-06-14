@@ -8,34 +8,30 @@ import sqlite3
 import os
 from supabase import create_client
 from datetime import datetime
-from utils import get_user_role , supabase
+from st_login_form import login_form
+from utils import supabase, get_user_role
+
+from utils import get_user_role
 
 st.set_page_config(page_title="RentEasy Pro", layout="wide")
 
-if 'user' not in st.session_state:
-    st.session_state['user'] = None
+# 1. Initialize your Supabase connection using a unique name
+# We call this 'db_conn' to avoid conflict with login state
+db_conn = st.connection("supabase", type="sql")
 
-# Login Form
-if not st.session_state['user']:
-    st.title("RentEasy Pro Login")
-    email = st.text_input("Email")
-    password = st.text_input("Password", type="password")
+# 2. Get the state from the login form
+# We assign this to 'login_state'
+login_state = login_form()
 
-    if st.button("Login"):
-        try:
-            auth = supabase.auth.sign_in_with_password({"email": email, "password": password})
-            user_id = auth.user.id
-            role = get_user_role(user_id)
+# 3. Safely navigate
+# We check if login_state is valid (not None) and is a dictionary before using .get()
+if login_state and isinstance(login_state, dict) and login_state.get("authenticated"):
+    st.success(f"Welcome {login_state.get('username')}")
 
-            st.session_state['user'] = auth.user
-            st.session_state['role'] = role
-            st.rerun()
-        except Exception as e:
-            st.error("Login failed. Check your credentials.")
+    # Route users based on role
+    role = get_user_role(login_state.get("username"))
 
-# Navigation Logic
-else:
-    if st.session_state['role'] == 'landlord':
+    if role == 'landlord':
         import landlord
 
         landlord.show_dashboard()
@@ -43,6 +39,12 @@ else:
         import tenant
 
         tenant.show_dashboard()
+
+    if st.sidebar.button("Logout"):
+        st.rerun()
+else:
+    # This displays the login prompt when no user is authenticated
+    st.info("Please login or create an account to continue.")
 
 
 def get_access_token():
