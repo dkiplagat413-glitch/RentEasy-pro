@@ -8,6 +8,42 @@ import sqlite3
 import os
 from supabase import create_client
 from datetime import datetime
+from utils import get_user_role , supabase
+
+st.set_page_config(page_title="RentEasy Pro", layout="wide")
+
+if 'user' not in st.session_state:
+    st.session_state['user'] = None
+
+# Login Form
+if not st.session_state['user']:
+    st.title("RentEasy Pro Login")
+    email = st.text_input("Email")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Login"):
+        try:
+            auth = supabase.auth.sign_in_with_password({"email": email, "password": password})
+            user_id = auth.user.id
+            role = get_user_role(user_id)
+
+            st.session_state['user'] = auth.user
+            st.session_state['role'] = role
+            st.rerun()
+        except Exception as e:
+            st.error("Login failed. Check your credentials.")
+
+# Navigation Logic
+else:
+    if st.session_state['role'] == 'landlord':
+        import landlord
+
+        landlord.show_dashboard()
+    else:
+        import tenant
+
+        tenant.show_dashboard()
+
 
 def get_access_token():
     consumer_key = st.secrets["mpesa"]["consumer_key"]
