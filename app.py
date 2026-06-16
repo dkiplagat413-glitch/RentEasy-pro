@@ -9,42 +9,180 @@ import os
 from supabase import create_client
 from datetime import datetime
 from st_login_form import login_form
-from utils import supabase, get_user_role
+from utils import supabase
+from utils import generate_receipt_pdf
+from utils import upload_property_image
+from utils import supabase, login_user, create_account
 
-from utils import get_user_role
+
+
+
+
 
 st.set_page_config(page_title="RentEasy Pro", layout="wide")
 
-# 1. Initialize your Supabase connection using a unique name
-# We call this 'db_conn' to avoid conflict with login state
-db_conn = st.connection("supabase", type="sql")
 
-# 2. Get the state from the login form
-# We assign this to 'login_state'
-login_state = login_form()
 
-# 3. Safely navigate
-# We check if login_state is valid (not None) and is a dictionary before using .get()
-if login_state and isinstance(login_state, dict) and login_state.get("authenticated"):
-    st.success(f"Welcome {login_state.get('username')}")
 
-    # Route users based on role
-    role = get_user_role(login_state.get("username"))
+url = "https://xaqttbolcbhfrsrvoghi.supabase.co"
+key = "sb_publishable_wMn2pnZiekIMxFTtkv7Npw_kGvHU74R"
+supabase = create_client(url, key)
 
-    if role == 'landlord':
-        import landlord
+def login_user(email, password):
+    try:
+        # Use the Supabase API to authenticate
+        response = supabase.auth.sign_in_with_password({
+            "email": email,
+            "password": password
+        })
+        return response
+    except Exception as e:
+        st.error(f"Login failed: {e}")
+        return None
 
-        landlord.show_dashboard()
+    st.session_state["user"] = None
+
+if "user" not in st.session_state:
+    st.session_state["user"] = None
+
+if st.session_state.get("user") is None:
+    st.title("RentEasy Pro Login")
+    email = st.text_input("Email")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Submit"):
+        # 1. Add validation: Check if fields are empty
+        if not email or not password:
+            st.error("Please enter both email and password.")
+        else:
+            # 2. Call your authentication function (e.g., login_user from utils.py)
+            user = login_user(email, password)
+
+            if user:
+                st.session_state["user"] = user
+                st.rerun()  # Forces the app to refresh and see the 'user' is logged in
+            else:
+                st.error("Login failed. Check your credentials.")
+
+    # The stop() is still here, but now it's correctly
+    # guarded by the session state logic above.
+    st.stop()
+
+# --- DASHBOARD (This area is now hidden until login succeeds) ---
+st.title("Welcome to the Dashboard")
+
+with st.sidebar:
+            st.title("RentEasy Pro")
+            page = st.radio("Navigation", ["Dashboard", "Properties", "Tenants", "Payments", "Reports"])
+            st.divider()
+            st.write("Settings")
+
+        # Main content switch
+if page == "Dashboard":
+    def show_maintenance_section():
+        st.subheader("🛠️ Maintenance Requests")
+
+        # This query fetches all requests AND the linked property name
+        # Ensure the foreign key relationship allows this join
+        response = supabase.table("maintenance_request").select("*, properties(name)").execute()
+        requests = response.data
+
+        if requests:
+            for req in requests:
+                # Safely get the property name from the joined table
+                prop_name = req.get('properties', {}).get('name', 'Unknown Property')
+
+                with st.container(border=True):
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        st.write(f"**Property:** {prop_name}")
+                        st.write(f"**Issue:** {req.get('description', 'No description')}")
+                    with col2:
+                        st.status(req.get('status', 'Pending'))
+                        st.write(f"Cost: KES {req.get('cost', 0)}")
+        else:
+            st.info("No active maintenance requests.")
+
+    st.header("Executive Summary")
+            # ... Dashboard code
+        # Create a row of metrics
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Total Properties", "12", "+2")
+    col2.metric("Occupied", "10", "85%")
+    col3.metric("Revenue (KES)", "150,000", "+12%")
+    col4.metric("Pending", "2", "High Priority")
+
+
+        # Fetch properties from Supabase here
+    response = supabase.table("properties").select("*").execute()
+    properties = response.data
+
+        # 2. RENDER THE GALLERY
+    st.subheader("Property Portfolio")
+
+
+
+
+    if properties:
+            cols = st.columns(3)
+            for i, prop in enumerate(properties):
+                with cols[i % 3]:
+                    # Use .get() with PARENTHESES ()
+                    st.image(prop.get('image_url', ''), use_column_width=True)
+                    st.write(f"**{prop.get('name', 'Unknown')}**")
+                    st.write(f"Status: {prop.get('status', 'N/A')}")
     else:
-        import tenant
+            st.info("No properties found in database.")
 
-        tenant.show_dashboard()
+            with st.container(border=True):
+                    st.subheader("Quick Actions")
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        st.button("💰 Record New Payment")
+                    with c2:
+                        st.button("🧾 Generate Receipt")
 
-    if st.sidebar.button("Logout"):
-        st.rerun()
-else:
-    # This displays the login prompt when no user is authenticated
-    st.info("Please login or create an account to continue.")
+
+
+
+    # 3. DASHBOARD CONTENT (The rest of your code)
+    # This code will only execute if the user IS logged in
+    st.write("Welcome to your dashboard!")
+    # ... (Your PDF generation, image upload, and payment features go here)
+
+st.subheader("Add Property Photos")
+uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+
+if uploaded_file is not None:
+    # Display the image preview
+    st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
+
+    if st.button("Upload to RentEasy"):
+        # Replace 'prop_123' with the actual ID from your database
+        path = upload_property_image(uploaded_file, "prop_123")
+        if path:
+            st.success("Image uploaded successfully!")
+        else:
+            st.error("Upload failed. Check your storage policy.")
+
+# Mock data (you would replace this with actual data from Supabase)
+tenant = "John Doe"
+amount = "500"
+date = "2026-06-16"
+
+if st.button("Generate Receipt"):
+    pdf_file = generate_receipt_pdf(tenant, amount, date)
+
+    # Provide download button
+    with open(pdf_file, "rb") as f:
+        st.download_button(
+            label="Download PDF Receipt",
+            data=f,
+            file_name="receipt.pdf",
+            mime="application/pdf"
+        )
+
+
 
 
 def get_access_token():

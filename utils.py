@@ -1,28 +1,70 @@
 
 import os
 import streamlit as st
-from dotenv import load_dotenv
+
 from supabase import create_client
+from fpdf import FPDF
+
+def create_account(email, password):
+    try:
+        response = supabase.auth.sign_up({
+            "email": email,
+            "password": password
+        })
+        return response
+    except Exception as e:
+        return None
 
 # 1. Load the variables from your .env file
-load_dotenv(dotenv_path='.env')
 
-# 2. Get the values
-url = os.environ.get("SUPABASE_URL", "").strip()
-key = os.environ.get("SUPABASE_KEY", "").strip()
+# Hardcoding these values to bypass st.secrets discovery
+SUPABASE_URL = "https://xaqttbolcbhfrsrvoghi.supabase.co"
+SUPABASE_KEY = "sb_publishable_wMn2pnZiekIMxFTkv7Npw_kGvHU74R"
 
-
-# 3. Debug
-print(f"DEBUG: URL is '{url}'")
-print(f"DEBUG: Key is '{key}'")
-
-# 4. Initialize
-supabase = create_client(url, key)
-
-def record_payment(phone, amount):
-    # ... keep your existing function here ...
-    pass
-
+# Initialize directly
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 def get_user_role(user_id):
-    # ... keep your existing function here ...
-    pass
+    return "tenant"
+
+def login_user(email, password):
+    try:
+        response = supabase.auth.sign_in_with_password({
+            "email": email,
+            "password": password
+        })
+        return response
+    except Exception as e:
+        return None
+
+
+def generate_receipt_pdf(tenant_name, amount, date):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+
+    # Header
+    pdf.cell(200, 10, txt="RentEasy Pro Receipt", ln=True, align='C')
+    pdf.ln(10)  # Line break
+
+    # Body
+    pdf.cell(200, 10, txt=f"Tenant: {tenant_name}", ln=True)
+    pdf.cell(200, 10, txt=f"Amount Paid: ${amount}", ln=True)
+    pdf.cell(200, 10, txt=f"Date: {date}", ln=True)
+
+    # Save to a temporary file
+    file_path = "receipt.pdf"
+    pdf.output(file_path)
+    return file_path
+def upload_property_image(image_file, property_id):
+    # This sends the file to the 'property-images' bucket
+    # We use the property_id to organize images into folders
+    path_on_supa = f"{property_id}/{image_file.name}"
+    try:
+        response = supabase.storage.from_("property-images").upload(
+            path=path_on_supa,
+            file=image_file.getvalue(),
+            file_options={"content-type": "image/jpeg"}
+        )
+        return path_on_supa
+    except Exception as e:
+        return None
