@@ -35,23 +35,26 @@ def login_user(email, password):
 if "user" not in st.session_state:
     st.session_state.user = None
 
+
+
 # Sidebar selection
 menu = st.sidebar.selectbox("Menu", ["Login", "Sign Up"])
 
-# Navigation
+# 2. Login Section
 if menu == "Login":
     st.subheader("RentEasy Pro Login")
     email = st.text_input("Email", key="login_email")
     password = st.text_input("Password", type="password", key="login_password")
 
     if st.button("Submit", key="login_btn"):
+        # Ensure you are passing the correct arguments here
         result = login_user(email, password)
         if hasattr(result, 'user'):
-            st.session_state.user = result.user
             st.success("Logged in successfully!")
         else:
             st.error("Login failed. Check your credentials.")
 
+# 3. Sign Up Section
 elif menu == "Sign Up":
     st.subheader("Create New Account")
     new_email = st.text_input("Email", key="signup_email")
@@ -63,8 +66,9 @@ elif menu == "Sign Up":
             st.error("Passwords do not match!")
         else:
             try:
+                # Use the 'supabase' client you initialized at the top
                 response = supabase.auth.sign_up({"email": new_email, "password": new_password})
-                st.success("Account created! Please navigate to Login.")
+                st.success("Account created! Please navigate to the Login page.")
             except Exception as e:
                 st.error(f"Error: {e}")
 
