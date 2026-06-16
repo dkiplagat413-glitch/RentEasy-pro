@@ -14,31 +14,65 @@ from utils import generate_receipt_pdf
 from utils import upload_property_image
 from utils import supabase, login_user, create_account
 
-
-
-
-
-
+# 1. Setup
 st.set_page_config(page_title="RentEasy Pro", layout="wide")
+supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
 
-
-
-url = "https://xaqttbolcbhfrsrvoghi.supabase.co"
-key = "sb_publishable_wMn2pnZiekIMxFTtkv7Npw_kGvHU74R"
-supabase = create_client(url, key)
-
+# 2. Function Definition (Defined before use)
 def login_user(email, password):
     try:
-        # Use the Supabase API to authenticate
         response = supabase.auth.sign_in_with_password({
             "email": email,
             "password": password
         })
         return response
     except Exception as e:
-        st.error(f"Login failed: {e}")
-        return None
+        return e
+
+
+# 3. Main Logic (Left-aligned, clear flow)
+if "user" not in st.session_state:
+    st.session_state.user = None
+
+# Sidebar selection
+menu = st.sidebar.selectbox("Menu", ["Login", "Sign Up"])
+
+# Navigation
+if menu == "Login":
+    st.subheader("RentEasy Pro Login")
+    email = st.text_input("Email", key="login_email")
+    password = st.text_input("Password", type="password", key="login_password")
+
+    if st.button("Submit", key="login_btn"):
+        result = login_user(email, password)
+        if hasattr(result, 'user'):
+            st.session_state.user = result.user
+            st.success("Logged in successfully!")
+        else:
+            st.error("Login failed. Check your credentials.")
+
+elif menu == "Sign Up":
+    st.subheader("Create New Account")
+    new_email = st.text_input("Email", key="signup_email")
+    new_password = st.text_input("Password", type="password", key="signup_password")
+    confirm_password = st.text_input("Confirm Password", type="password", key="confirm_password")
+
+    if st.button("Register", key="signup_btn"):
+        if new_password != confirm_password:
+            st.error("Passwords do not match!")
+        else:
+            try:
+                response = supabase.auth.sign_up({"email": new_email, "password": new_password})
+                st.success("Account created! Please navigate to Login.")
+            except Exception as e:
+                st.error(f"Error: {e}")
+
+                st.stop()
+
+
+    st.title("Welcome to RentEasy Pro")
+
 
     st.session_state["user"] = None
 
