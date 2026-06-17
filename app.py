@@ -49,8 +49,10 @@ if menu == "Login":
     if st.button("Submit", key="login_btn"):
         # Ensure you are passing the correct arguments here
         result = login_user(email, password)
-        if hasattr(result, 'user'):
+        if hasattr(result, 'user') and result.user:
+            st.session_state["user"] = result.user
             st.success("Logged in successfully!")
+            st.rerun()
         else:
             st.error("Login failed. Check your credentials.")
 
@@ -84,23 +86,7 @@ if "user" not in st.session_state:
     st.session_state["user"] = None
 
 if st.session_state.get("user") is None:
-    st.title("RentEasy Pro Login")
-    email = st.text_input("Email")
-    password = st.text_input("Password", type="password")
 
-    if st.button("Submit"):
-        # 1. Add validation: Check if fields are empty
-        if not email or not password:
-            st.error("Please enter both email and password.")
-        else:
-            # 2. Call your authentication function (e.g., login_user from utils.py)
-            user = login_user(email, password)
-
-            if user:
-                st.session_state["user"] = user
-                st.rerun()  # Forces the app to refresh and see the 'user' is logged in
-            else:
-                st.error("Login failed. Check your credentials.")
 
     # The stop() is still here, but now it's correctly
     # guarded by the session state logic above.
@@ -110,13 +96,44 @@ if st.session_state.get("user") is None:
 st.title("Welcome to the Dashboard")
 
 with st.sidebar:
-            st.title("RentEasy Pro")
-            page = st.radio("Navigation", ["Dashboard", "Properties", "Tenants", "Payments", "Reports"])
-            st.divider()
-            st.write("Settings")
+    page = st.selectbox("Navigation", ["Dashboard", "My Bookings"])
+
+
+    st.title("RentEasy Pro")
+    page = st.radio("Navigation", ["Dashboard", "Properties", "Tenants", "Payments", "Reports"])
+    st.divider()
+    st.write("Settings")
 
         # Main content switch
 if page == "Dashboard":
+    if page == "My Bookings":
+        st.header("My Reservations")
+
+        # Fetch only properties that are booked by the current user
+        # Note: Make sure your 'properties' table has a 'user_id' or similar column
+        user_email = st.session_state["user"].email
+        booked_properties = supabase.table("properties") \
+            .select("*") \
+            .eq("booked_by", user_email) \
+            .execute().data
+
+        if booked_properties:
+            for prop in booked_properties:
+                st.image(prop.get('image_url'), width=250)
+                st.write(f"### {prop.get('name')}")
+                st.write(f"Status: **{prop.get('status')}**")
+
+                if st.button(f"Cancel Booking {prop.get('name')}", key=f"cancel_{prop.get('id')}"):
+                    supabase.table("properties") \
+                        .update({"status": "Available", "booked_by": None}) \
+                        .eq("id", prop.get('id')) \
+                        .execute()
+                    st.rerun()
+        else:
+            st.info("You haven't booked any properties yet.")
+
+
+
     def show_maintenance_section():
         st.subheader("🛠️ Maintenance Requests")
 
@@ -155,20 +172,53 @@ if page == "Dashboard":
     response = supabase.table("properties").select("*").execute()
     properties = response.data
 
+
         # 2. RENDER THE GALLERY
     st.subheader("Property Portfolio")
+    search_query = st.text_input("Search properties by name...")
+    properties = supabase.table("properties"). select("*"). execute().data
+    if properties:
 
+        properties = [p for p in properties if search_query.lower() in p.get('name', ''). lower ()]
+        properties = properties
 
+    # This loop goes through every property in your database list
+    for prop in properties:
+        image_url = prop.get('image_url')
 
+        if image_url:
+            # Now 'prop' is defined for each individual property
+            st.image(image_url, caption=prop.get('name'), width=250)
+        else:
+            st.write(f"No image available for {prop.get('name')}")
 
     if properties:
             cols = st.columns(3)
             for i, prop in enumerate(properties):
                 with cols[i % 3]:
                     # Use .get() with PARENTHESES ()
-                    st.image(prop.get('image_url', ''), use_column_width=True)
+                    st.image(prop.get('image_url', ''), width=250)
                     st.write(f"**{prop.get('name', 'Unknown')}**")
                     st.write(f"Status: {prop.get('status', 'N/A')}")
+
+                    st.subheader("Property Portfolio")
+
+                    # Fetch data ONLY inside the gate
+                    properties = supabase.table("properties").select("*").execute().data
+
+                    if properties:
+                        for prop in properties:
+                            st.image(prop.get('image_url'), caption=prop.get('name'), width=250)
+
+                            # Booking button - also protected by the gate
+                            if st.button(f"Book {prop.get('name')}", key=f"book_{prop.get('id')}"):
+                                supabase.table("properties") \
+                                    .update({"status": "Booked"}) \
+                                    .eq("id", prop.get('id')) \
+                                    .execute()
+                                st.rerun()
+                    else:
+                        st.write("No properties found.")
     else:
             st.info("No properties found in database.")
 
