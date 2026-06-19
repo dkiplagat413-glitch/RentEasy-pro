@@ -65,6 +65,8 @@ def upload_property_image(image_file, property_id):
             file=image_file.getvalue(),
             file_options={"content-type": "image/jpeg"}
         )
-        return path_on_supa
+        public_url = supabase.storage.from_("property-images").get_public_url(path_on_supa)
+        return public_url
+
     except Exception as e:
         return None
