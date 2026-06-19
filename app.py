@@ -133,8 +133,8 @@ if page == "Dashboard":
         props = supabase.table("properties").select("*").execute().data
         maintenance = supabase.table("maintenance_request") \
             .select("*").eq("status", "Pending").execute().data
-        payments_data = supabase.table("payments").select("amount").execute().data
-        revenue = sum([p.get("amount", 0) for p in payments_data])
+        payments_data = supabase.table("payments").select("amount, status").execute().data
+        revenue = sum([p.get("amount", 0) for p in payments_data if p.get("status") == "completed"])
 
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Total Properties", len(props))
@@ -164,7 +164,7 @@ if page == "Dashboard":
 
 
 elif page == "Properties":
-    st.header("Executive Summary")
+    st.header("🏠 Properties")
     if user_role == "landlord":
         with st.expander("➕ Add New Property"):
             new_name = st.text_input("Property Name", key="new_prop_name")
@@ -355,13 +355,17 @@ elif page == "Payments":
 elif page == "Pay Rent":
     st.header("Pay Rent")
     st.subheader("Pay Rent (M-Pesa)")
+
+    # Init session state for receipt
+    if "last_receipt" not in st.session_state:
+        st.session_state["last_receipt"] = None
+
     phone = st.text_input("M-Pesa Phone Number (e.g., 2547XXXXXXXX)", value="254")
     pay_amount = st.number_input("Rent Amount", min_value=1.0)
 
     if st.button("Pay Now"):
         token = get_access_token()
         if token:
-            st.success("Authentication Successful!")
             timestamp, password = get_stk_password()
             headers = {"Authorization": f"Bearer {token}"}
             payload = {
@@ -390,26 +394,34 @@ elif page == "Pay Rent":
                         "status": "pending",
                         "tenant_email": st.session_state["user"].email
                     }).execute()
-                    st.success("✅ STK Push sent! Check your phone.")
+                    st.success("✅ STK Push sent! Check your phone and enter PIN.")
 
-                    # Generate receipt
+                    # Store receipt data in session state so it survives rerun
                     tenant_name = st.session_state["user"].email
                     date_str = datetime.now().strftime("%Y-%m-%d")
                     pdf_file = generate_receipt_pdf(tenant_name, str(int(pay_amount)), date_str)
-
                     with open(pdf_file, "rb") as f:
-                        st.download_button(
-                            label="📄 Download Receipt",
-                            data=f,
-                            file_name=f"receipt_{date_str}.pdf",
-                            mime="application/pdf"
-                        )
+                        st.session_state["last_receipt"] = {
+                            "data": f.read(),
+                            "filename": f"RentEasy_Receipt_{date_str}.pdf"
+                        }
                 except Exception as e:
                     st.error(f"Database error: {e}")
             else:
                 st.error(f"Failed to initiate payment: {response.text}")
         else:
             st.error("Could not authenticate with M-Pesa. Check your credentials.")
+
+    # Always show receipt download if available
+    if st.session_state.get("last_receipt"):
+        st.success("✅ Payment initiated!")
+        st.download_button(
+            label="📄 Download Receipt",
+            data=st.session_state["last_receipt"]["data"],
+            file_name=st.session_state["last_receipt"]["filename"],
+            mime="application/pdf",
+            key="receipt_download"
+        )
 
     # ✅ Payment history is NOW outside the button block — always visible
     st.divider()
@@ -471,7 +483,7 @@ elif page == "Reports":
     if user_role != "landlord":
         st.error("You don't have access to this page.")
         st.stop()
-    st.header("Maintenance Requests")
+    st.header("🔧 Maintenance Requests")
 
     requests = supabase.table("maintenance_request") \
         .select("*, properties(name)") \
@@ -487,8 +499,11 @@ elif page == "Reports":
                     st.write(f"**Issue:** {req.get('description', 'No description')}")
                     st.write(f"**Reported by:** {req.get('tenant_email', 'Unknown')}")
                 with col2:
-                    st.write(f"Status: {req.get('status', 'Pending')}")
-                    if req.get("status") != "Resolved":
+                    status = req.get('status', 'Pending')
+                    if status == 'Resolved':
+                        st.markdown(":green[✅ Resolved]")
+                    else:
+                        st.markdown(":orange[⏳ Pending]")
                         if st.button("Mark Resolved", key=f"resolve_{req.get('id')}"):
                             supabase.table("maintenance_request") \
                                 .update({"status": "Resolved"}) \
