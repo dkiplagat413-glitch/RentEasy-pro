@@ -55,18 +55,35 @@ def generate_receipt_pdf(tenant_name, amount, date):
     file_path = "receipt.pdf"
     pdf.output(file_path)
     return file_path
+
+
 def upload_property_image(image_file, property_id):
-    # This sends the file to the 'property-images' bucket
-    # We use the property_id to organize images into folders
-    path_on_supa = f"{property_id}/{image_file.name}"
     try:
-        response = supabase.storage.from_("property-images").upload(
+        # Get file bytes and detect type
+        file_bytes = image_file.getvalue()
+        file_name = image_file.name
+
+        # Detect content type
+        if file_name.lower().endswith(".png"):
+            content_type = "image/png"
+        else:
+            content_type = "image/jpeg"
+
+        # Simple flat path — no folders
+        path_on_supa = f"{property_id}_{file_name}"
+
+        # Upload to Supabase storage
+        supabase.storage.from_("property-images").upload(
             path=path_on_supa,
-            file=image_file.getvalue(),
-            file_options={"content-type": "image/jpeg"}
+            file=file_bytes,
+            file_options={"content-type": content_type, "upsert": "true"}
         )
+
+        # Get public URL
         public_url = supabase.storage.from_("property-images").get_public_url(path_on_supa)
         return public_url
 
     except Exception as e:
+        print(f"Image upload error: {e}")
         return None
+
