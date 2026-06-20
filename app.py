@@ -179,6 +179,7 @@ elif page == "Properties":
                     image_url = None
                     if new_image:
                         image_url = upload_property_image(new_image, new_name)
+                        st.write(f"DEBUG image_url: {image_url}")
 
                     supabase.table("properties").insert({
                         "name": new_name,
