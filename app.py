@@ -79,7 +79,7 @@ if st.session_state.get("user") is None:
         new_password = st.text_input("Password", type="password", key="signup_password")
         confirm_password = st.text_input("Confirm Password", type="password", key="confirm_password")
 
-        new_role = st.radio("I am a...", ["tenant", "landlord"], key="signup_role")
+        new_role = "tenant"
 
         if st.button("Register", key="signup_btn"):
             if new_password != confirm_password:
