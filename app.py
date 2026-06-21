@@ -291,7 +291,7 @@ elif page == "Tenants":
         st.info("No active tenants yet.")
 
 elif page == "Maintenance":
-    st.header("Maintenance Requests")
+    st.header("Maintenance Request")
     st.subheader("Report an Issue")
 
     user_properties = supabase.table("properties") \
