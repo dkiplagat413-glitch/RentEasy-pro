@@ -13,11 +13,16 @@ from landlord import show_dashboard as landlord_dashboard
 # 1. Setup
 st.set_page_config(page_title="RentEasy Pro", layout="wide", page_icon="🏢")
 supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
+supabase_admin = create_client(
+    st.secrets["SUPABASE_URL"],
+    st.secrets["SUPABASE_SERVICE_KEY"]
+)
 if "session" in st.session_state and st.session_state["session"]:
     supabase.auth.set_session(
         st.session_state["session"].access_token,
         st.session_state["session"].refresh_token
     )
+
 
 
 # 2. Helper functions (defined before use)
@@ -216,7 +221,7 @@ elif page == "Properties":
                     st.rerun()
 
     col1, col2, col3, col4 = st.columns(4)
-    all_properties = supabase.table("properties").select("*").execute().data
+    all_properties = supabase_admin.table("properties").select("*").execute().data
     total = len(all_properties)
     occupied = len([p for p in all_properties if p.get("status") == "Booked"])
     available = total - occupied
@@ -238,12 +243,14 @@ elif page == "Properties":
 
     properties = all_properties
 
+
     if search_query:
         properties = [p for p in properties if search_query.lower() in p.get("name", "").lower()]
 
+
     if location_filter != "All Counties":
-        properties = [p for p in properties if location_filter.lower() in p.get("location", "").lower()]
-        if properties:
+            properties = [p for p in properties if location_filter.lower() in p.get("location", "").lower()]
+    if properties:
             cols = st.columns(3)
             for i, prop in enumerate(properties):
                 with cols[i % 3]:
