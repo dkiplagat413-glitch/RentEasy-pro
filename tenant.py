@@ -33,7 +33,8 @@ def show_pay_rent(supabase):
             "phone_number": phone,
             "amount": amount,
             "status": "pending",
-            "tenant_email": tenant_email
+            "tenant_email": tenant_email,
+
         }).execute()
 
         st.success(f"Payment of KES {amount} initiated to {phone}. Check history for status.")

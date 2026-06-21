@@ -169,6 +169,11 @@ elif page == "Properties":
     if user_role == "landlord":
         with st.expander("➕ Add New Property"):
             new_name = st.text_input("Property Name", key="new_prop_name")
+            new_location = st.text_input(
+                label="Location (e.g. Westlands, Nairobi)",
+                key="new_prop_location"
+            )
+
             new_description = st.text_area("Description", key="new_prop_desc")
             new_price = st.number_input("Monthly Rent (KES)", min_value=0, key="new_prop_price")
             new_image = st.file_uploader("Property Photo", type=["jpg", "jpeg", "png"], key="new_prop_img")
@@ -204,7 +209,8 @@ elif page == "Properties":
                         "price": new_price,
                         "status": "Available",
                         "image_url": image_url,
-                        "video_url": video_url
+                        "video_url": video_url,
+                        "location": new_location
                     }).execute()
                     st.success(f"Property '{new_name}' added successfully!")
                     st.rerun()
@@ -223,13 +229,20 @@ elif page == "Properties":
     col4.metric("Revenue (KES)", f"KES {revenue:,.0f}")
 
     st.subheader("Property Portfolio")
-    search_query = st.text_input("Search properties by name...")
+    search_query = st.text_input("Search by name...")
+    location_filter = st.selectbox("Filter by County", [
+        "All Counties", "Nairobi", "Mombasa", "Kisumu", "Nakuru",
+        "Eldoret", "Thika", "Malindi", "Kitale", "Garissa", "Nyeri",
+        "Meru", "Machakos", "Kakamega", "Kisii", "Kericho"
+    ])
+
     properties = all_properties
 
-    if properties:
-        if search_query:
-            properties = [p for p in properties if search_query.lower() in p.get("name", "").lower()]
+    if search_query:
+        properties = [p for p in properties if search_query.lower() in p.get("name", "").lower()]
 
+    if location_filter != "All Counties":
+        properties = [p for p in properties if location_filter.lower() in p.get("location", "").lower()]
         if properties:
             cols = st.columns(3)
             for i, prop in enumerate(properties):
@@ -239,6 +252,7 @@ elif page == "Properties":
                         st.image(image_url, width=250)
                     else:
                         st.write("No image available")
+                        st.write(f"📍 {prop.get('location', 'Location not specified')}")
 
                     video_url = prop.get("video_url")
                     if video_url:
