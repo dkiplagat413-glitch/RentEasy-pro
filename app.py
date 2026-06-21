@@ -5,6 +5,7 @@ import base64
 from datetime import datetime
 from supabase import create_client
 from utils import generate_receipt_pdf, upload_property_image
+from email_utils import send_payment_confirmation, send_maintenance_update
 from tenant import show_dashboard as tenant_dashboard
 from landlord import show_dashboard as landlord_dashboard
 
@@ -171,6 +172,11 @@ elif page == "Properties":
             new_description = st.text_area("Description", key="new_prop_desc")
             new_price = st.number_input("Monthly Rent (KES)", min_value=0, key="new_prop_price")
             new_image = st.file_uploader("Property Photo", type=["jpg", "jpeg", "png"], key="new_prop_img")
+            new_video = st.file_uploader(
+                "Property Video Tour (optional)",
+                type=["mp4", "mov", "avi"],
+                key="prop_video"
+            )
 
             if st.button("Add Property", key="add_prop_btn"):
                 if not new_name:
@@ -181,12 +187,24 @@ elif page == "Properties":
                         image_url = upload_property_image(new_image, new_name)
                         st.write(f"DEBUG image_url: {image_url}")
 
+                    video_url = None
+                    if new_video:
+                        video_bytes = new_video.getvalue()
+                        video_path = f"{new_name.replace(' ', '_')}_video.mp4"
+                        supabase.storage.from_("property-images").upload(
+                            path=video_path,
+                            file=video_bytes,
+                            file_options={"content-type": "video/mp4", "upsert": True}
+                        )
+                        video_url = supabase.storage.from_("property-images").get_public_url(video_path)
+
                     supabase.table("properties").insert({
                         "name": new_name,
                         "description": new_description,
                         "price": new_price,
                         "status": "Available",
-                        "image_url": image_url
+                        "image_url": image_url,
+                        "video_url": video_url
                     }).execute()
                     st.success(f"Property '{new_name}' added successfully!")
                     st.rerun()
@@ -221,6 +239,11 @@ elif page == "Properties":
                         st.image(image_url, width=250)
                     else:
                         st.write("No image available")
+
+                    video_url = prop.get("video_url")
+                    if video_url:
+                        st.video(video_url)
+
                     st.write(f"**{prop.get('name', 'Unknown')}**")
                     st.write(f"Status: {prop.get('status', 'N/A')}")
 
@@ -378,7 +401,7 @@ elif page == "Pay Rent":
                 "PartyA": phone,
                 "PartyB": "174379",
                 "PhoneNumber": phone,
-                "CallBackURL": "https://duplicity-sliceable-trillion.ngrok-free.dev/callback",
+                "CallBackURL": "https://mpesa-callback-bddq.onrender.com/callback",
                 "AccountReference": "RentPayment",
                 "TransactionDesc": "Rent Payment"
             }
@@ -396,6 +419,11 @@ elif page == "Pay Rent":
                         "tenant_email": st.session_state["user"].email
                     }).execute()
                     st.success("✅ STK Push sent! Check your phone and enter PIN.")
+                    send_payment_confirmation(
+                        st.session_state["user"].email,
+                        int(pay_amount),
+                        datetime.now().strftime("%Y-%m-%d")
+                    )
 
                     # Store receipt data in session state so it survives rerun
                     tenant_name = st.session_state["user"].email
@@ -468,6 +496,7 @@ elif page == "My Bookings":
     if booked_properties:
         for prop in booked_properties:
             st.image(prop.get("image_url"), width=250)
+
             st.write(f"### {prop.get('name')}")
             st.write(f"Status: **{prop.get('status')}**")
 
@@ -503,13 +532,28 @@ elif page == "Reports":
                     status = req.get('status', 'Pending')
                     if status == 'Resolved':
                         st.markdown(":green[✅ Resolved]")
+                        send_maintenance_update(
+                            req.get("tenant_email"),
+                            req.get("description"),
+                            "Resolved"
+                        )
+
                     else:
                         st.markdown(":orange[⏳ Pending]")
-                        if st.button("Mark Resolved", key=f"resolve_{req.get('id')}"):
+
+                        if st.button(label="Mark Resolved", key=f"resolve_{req.get('id')}"):
                             supabase.table("maintenance_request") \
                                 .update({"status": "Resolved"}) \
                                 .eq("id", req.get("id")) \
                                 .execute()
+
+                            # Send email to tenant
+                            send_maintenance_update(
+                                req.get("tenant_email"),
+                                req.get("description"),
+                                "Resolved"
+                            )
                             st.rerun()
+
     else:
         st.info("No maintenance requests yet.")
