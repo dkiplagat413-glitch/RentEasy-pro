@@ -194,7 +194,7 @@ elif page == "Properties":
                         supabase.storage.from_("property-images").upload(
                             path=video_path,
                             file=video_bytes,
-                            file_options={"content-type": "video/mp4", "upsert": True}
+                            file_options={"content-type": "video/mp4", "upsert": "true"}
                         )
                         video_url = supabase.storage.from_("property-images").get_public_url(video_path)
 

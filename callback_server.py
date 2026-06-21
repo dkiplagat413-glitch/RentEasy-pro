@@ -1,6 +1,10 @@
 from flask import Flask, request, jsonify
+from pandas.core.tools import times
 from supabase import create_client
 import toml
+import threading
+import requests
+import time
 
 app = Flask(__name__)
 
@@ -35,5 +39,22 @@ def mpesa_callback():
     return jsonify({"ResultCode": 0, "ResultDesc": "Success"})
 
 
+def keep_alive():
+    while True:
+        time.sleep(840)
+        try:
+            requests.get("https://mpesa-callback-bddq.onrender.com/")
+        except:
+            pass
+
+
+@app.route("/", methods=["GET"])
+def home():
+    return "M-Pesa Callback Server Running", 200
+
+
 if __name__ == "__main__":
+    t = threading.Thread(target=keep_alive, daemon=True)
+    t.start()
     app.run(port=5000)
+
