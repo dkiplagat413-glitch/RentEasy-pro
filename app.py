@@ -4,7 +4,7 @@ import requests
 import base64
 from datetime import datetime
 from supabase import create_client
-from utils import generate_receipt_pdf, upload_property_image
+from utils import generate_receipt_pdf, upload_property_image,generate_lease_pdf
 from email_utils import send_payment_confirmation, send_maintenance_update
 from tenant import show_dashboard as tenant_dashboard
 from landlord import show_dashboard as landlord_dashboard
@@ -119,7 +119,7 @@ with st.sidebar:
     st.title("RentEasy Pro")
 
     if user_role == "landlord":
-        nav_options = ["Dashboard", "Properties", "Tenants", "Payments", "Reports"]
+        nav_options = ["Dashboard", "Properties", "Tenants", "Payments", "Reports","Lease Agreements"]
     else:
         nav_options = ["Dashboard", "Properties", "My Bookings", "Pay Rent", "Maintenance"]
 
@@ -578,3 +578,54 @@ elif page == "Reports":
 
     else:
         st.info("No maintenance requests yet.")
+
+elif page == "Lease Agreements":
+        st.header("📄 Lease Agreements")
+
+        if user_role != "landlord":
+            st.error("You don't have access to this page.")
+        else:
+            booked = supabase_admin.table("properties") \
+                .select("*") \
+                .eq("status", "Booked") \
+                .execute().data
+
+            st.subheader("Generate New Lease Agreement")
+
+            with st.form("lease_form"):
+                landlord_name = st.text_input("Landlord Full Name")
+                landlord_phone = st.text_input("Landlord Phone")
+                tenant_name = st.text_input("Tenant Full Name")
+                tenant_phone = st.text_input("Tenant Phone")
+                property_options = [p["name"] for p in booked] if booked else ["No booked properties"]
+                selected_prop = st.selectbox("Select Property", property_options)
+                property_address = st.text_input("Property Address/Location")
+                monthly_rent = st.number_input("Monthly Rent (KES)", min_value=0.0)
+                deposit_amount = st.number_input("Security Deposit (KES)", min_value=0.0)
+                start_date = st.date_input("Lease Start Date")
+                end_date = st.date_input("Lease End Date")
+                submit = st.form_submit_button("Generate Lease Agreement")
+
+            if submit:
+                    file_path = generate_lease_pdf(
+                        landlord_name=landlord_name,
+                        landlord_phone=landlord_phone,
+                        tenant_name=tenant_name,
+                        tenant_phone=tenant_phone,
+                        property_name=selected_prop,
+                        property_address=property_address,
+                        monthly_rent=monthly_rent,
+                        deposit_amount=deposit_amount,
+                        start_date=str(start_date),
+                        end_date=str(end_date)
+                    )
+                    with open(file_path, "rb") as f:
+                        st.download_button(
+                            label="📥 Download Lease Agreement",
+                            data=f,
+                            file_name=f"Lease_{tenant_name}_{selected_prop}.pdf",
+                            mime="application/pdf"
+                        )
+                    st.success(f"Lease generated for {tenant_name}!")
+
+
