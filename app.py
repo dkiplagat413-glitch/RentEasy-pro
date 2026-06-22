@@ -12,6 +12,53 @@ from landlord import show_dashboard as landlord_dashboard
 
 # 1. Setup
 st.set_page_config(page_title="RentEasy Pro", layout="wide", page_icon="🏢")
+st.markdown("""
+<style>
+    .stApp {
+        background-color: #f0f7f0;
+    }
+    [data-testid="stSidebar"] {
+        background-color: #1a5c2a;
+    }
+    [data-testid="stSidebar"] * {
+        color: white !important;
+    }
+    h1, h2, h3 {
+        color: #1a5c2a !important;
+    }
+    [data-testid="stMetric"] {
+        background-color: white;
+        border: 2px solid #1a5c2a;
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
+    }
+    [data-testid="stMetricValue"] {
+        color: #1a5c2a !important;
+        font-weight: bold !important;
+    }
+    .stButton > button {
+        background-color: #1a5c2a !important;
+        color: white !important;
+        border-radius: 8px !important;
+        border: none !important;
+        font-weight: bold !important;
+    }
+    .stButton > button:hover {
+        background-color: #2d8a42 !important;
+    }
+    .stTextInput > div > div > input,
+    .stNumberInput > div > div > input {
+        border: 2px solid #1a5c2a !important;
+        border-radius: 8px !important;
+    }
+    .stSelectbox > div > div {
+        border: 2px solid #1a5c2a !important;
+        border-radius: 8px !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 supabase_admin = create_client(
     st.secrets["SUPABASE_URL"],
@@ -60,11 +107,15 @@ if "user" not in st.session_state:
 
 # 4. Auth gate — nothing below this block runs unless the user is logged in
 if st.session_state.get("user") is None:
-    st.title("Welcome to RentEasy Pro")
+
+
+
     menu = st.sidebar.selectbox("Menu", ["Login", "Sign Up"])
 
     if menu == "Login":
-        st.subheader("RentEasy Pro Login")
+        st.markdown("<h3 style='color: #1a5c2a; text-align: center;'>🔐 Login to Your Account</h3>",
+                    unsafe_allow_html=True)
+
         email = st.text_input("Email", key="login_email")
         password = st.text_input("Password", type="password", key="login_password")
 
@@ -129,7 +180,8 @@ with st.sidebar:
         st.session_state["user"] = None
         st.session_state["session"] = None
         st.rerun()
-    st.write("Settings")
+    st.divider()
+    st.markdown(f"📧 **{st.session_state['user'].email}**")
 # 5. Page router
 if page == "Dashboard":
     st.header("Dashboard")
