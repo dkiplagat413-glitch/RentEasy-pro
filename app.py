@@ -3,9 +3,10 @@ import streamlit as st
 import requests
 import base64
 from datetime import datetime
-from supabase import create_client
+from supabase import create_client, Client
 from utils import generate_receipt_pdf, upload_property_image,generate_lease_pdf
 from email_utils import send_payment_confirmation, send_maintenance_update
+
 from tenant import show_dashboard as tenant_dashboard
 from landlord import show_dashboard as landlord_dashboard
 
@@ -59,11 +60,15 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
-supabase_admin = create_client(
-    st.secrets["SUPABASE_URL"],
-    st.secrets["SUPABASE_SERVICE_KEY"]
-)
+url = st.secrets["SUPABASE_URL"]
+key = st.secrets["SUPABASE_KEY"]
+service_key = st.secrets["SUPABASE_SERVICE_KEY"]
+
+supabase = create_client(url, key)
+supabase_admin = create_client(url, service_key)
+
+
+
 if "session" in st.session_state and st.session_state["session"]:
     supabase.auth.set_session(
         st.session_state["session"].access_token,
