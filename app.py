@@ -594,7 +594,7 @@ elif page == "Reports":
     st.header("🔧 Maintenance Requests")
 
     requests = supabase.table("maintenance_request") \
-        .select("*, properties(name)") \
+        .select("*, properties(name), tenant_email") \
         .execute().data
 
     if requests:
@@ -610,11 +610,7 @@ elif page == "Reports":
                     status = req.get('status', 'Pending')
                     if status == 'Resolved':
                         st.markdown(":green[✅ Resolved]")
-                        send_maintenance_update(
-                            req.get("tenant_email"),
-                            req.get("description"),
-                            "Resolved"
-                        )
+
 
                     else:
                         st.markdown(":orange[⏳ Pending]")

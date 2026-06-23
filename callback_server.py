@@ -5,11 +5,14 @@ import toml
 import threading
 import requests
 import time
+import os
 
 app = Flask(__name__)
 
-secrets = toml.load(".streamlit/secrets.toml")
-supabase = create_client(secrets["SUPABASE_URL"], secrets["SUPABASE_SERVICE_KEY"])
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY")
+supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 @app.route("/callback", methods=["POST"])
 def mpesa_callback():
@@ -41,7 +44,7 @@ def mpesa_callback():
 
 def keep_alive():
     while True:
-        time.sleep(840)
+        time.sleep(600)
         try:
             requests.get("https://mpesa-callback-bddq.onrender.com/")
         except:
