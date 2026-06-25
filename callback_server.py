@@ -61,3 +61,7 @@ if __name__ == "__main__":
     t.start()
     app.run(port=5000)
 
+@app.get("/")
+def root():
+    return {"status": "ok", "service": "RentEasy M-Pesa Callback"}
+
