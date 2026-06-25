@@ -614,20 +614,25 @@ elif page == "Reports":
 
                     else:
                         st.markdown(":orange[⏳ Pending]")
-
                         if st.button(label="Mark Resolved", key=f"resolve_{req.get('id')}"):
                             supabase.table("maintenance_request") \
                                 .update({"status": "Resolved"}) \
                                 .eq("id", req.get("id")) \
                                 .execute()
 
-                            # Send email to tenant
-                            send_maintenance_update(
+                            result = send_maintenance_update(
                                 req.get("tenant_email"),
                                 req.get("description"),
-                                "Resolved"
+                                status="Resolved"
                             )
+                            if result:
+                                st.success("Status updated and email sent!")
+                            else:
+                                st.error("Status updated but email failed to send.")
                             st.rerun()
+
+
+
 
     else:
         st.info("No maintenance requests yet.")
