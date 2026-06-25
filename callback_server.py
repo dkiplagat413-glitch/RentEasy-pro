@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 
 from supabase import create_client
-import toml
+
 import threading
 import requests
 import time
@@ -10,12 +10,13 @@ import os
 app = Flask(__name__)
 
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY")
-supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 @app.route("/callback", methods=["POST"])
 def mpesa_callback():
+    SUPABASE_URL = os.environ.get("SUPABASE_URL")
+    SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY")
+    supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+
     data = request.get_json()
 
     try:
